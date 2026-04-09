@@ -31,9 +31,9 @@ const INITIAL_DATA: TemplateData = {
 };
 
 const TEMPLATE_IMAGES = {
-  cover: '/api/attachments/dc4a9510-99aa-4a5c-a26a-edd3d3b44559/0',
-  question: '/api/attachments/dc4a9510-99aa-4a5c-a26a-edd3d3b44559/1',
-  solution: '/api/attachments/dc4a9510-99aa-4a5c-a26a-edd3d3b44559/2',
+  cover: '/template1.png',
+  question: '/template2.png',
+  solution: '/template3.png',
 };
 
 export default function App() {
@@ -177,12 +177,6 @@ export default function App() {
       ref={pageRefs[index]}
       className="w-[1920px] h-[1080px] relative overflow-hidden shrink-0 font-sans bg-white"
     >
-      <img 
-        src={bgImage} 
-        alt="" 
-        className="absolute inset-0 w-full h-full object-cover"
-        referrerPolicy="no-referrer"
-      />
       {/* Content Overlay */}
       <div className="absolute inset-0 p-20 flex flex-col z-10">
         {children}
