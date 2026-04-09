@@ -1,0 +1,5 @@
+{
+  "name": "Template Creator",
+  "description": "A 3-page template editor for creating and downloading custom question and solution cards.",
+  "requestFramePermissions": []
+}
