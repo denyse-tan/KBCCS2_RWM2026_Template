@@ -7,7 +7,7 @@ import {
   RefreshCcw
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
-import { jsPDF } from 'jspdf';
+import pptxgen from "pptxgenjs"; // New library for PowerPoint
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,14 +42,10 @@ export default function App() {
   
   const editorScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
-  const scaledContainerRef = useRef<HTMLDivElement>(null);
   const pageRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
   const handleInputChange = (page: keyof TemplateData, field: string, value: string) => {
-    setData(prev => ({
-      ...prev,
-      [page]: { ...prev[page], [field]: value }
-    }));
+    setData(prev => ({ ...prev, [page]: { ...prev[page], [field]: value } }));
   };
 
   const handleImageUpload = (page: 'page2' | 'page3', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,56 +53,43 @@ export default function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setData(prev => ({
-          ...prev,
-          [page]: { ...prev[page], image: reader.result as string }
-        }));
+        setData(prev => ({ ...prev, [page]: { ...prev[page], image: reader.result as string } }));
       };
       reader.readAsDataURL(file);
     }
   };
 
   const removeImage = (page: 'page2' | 'page3') => {
-    setData(prev => ({
-      ...prev,
-      [page]: { ...prev[page], image: null }
-    }));
+    setData(prev => ({ ...prev, [page]: { ...prev[page], image: null } }));
   };
 
-  const downloadPdf = async () => {
+  // POWERPOINT DOWNLOAD LOGIC
+  const downloadPptx = async () => {
     setIsDownloading(true);
-    // Small delay to ensure all DOM elements (especially text) are fully painted
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 800)); // Delay for text rendering
 
     try {
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'px',
-        format: [1920, 1080]
-      });
+      let pptx = new pptxgen();
+      pptx.layout = 'LAYOUT_WIDE'; // Sets 16:9 aspect ratio
 
       for (let i = 0; i < pageRefs.length; i++) {
         const ref = pageRefs[i].current;
         if (!ref) continue;
 
-        // capture the page
         const dataUrl = await toPng(ref, { 
           pixelRatio: 2,
           width: 1920,
           height: 1080,
-          skipFonts: false,
-          style: {
-            transform: 'scale(1)', // Ensures no scaling artifacts in the capture
-          }
+          cacheBust: true,
         });
 
-        if (i > 0) pdf.addPage([1920, 1080], 'landscape');
-        pdf.addImage(dataUrl, 'PNG', 0, 0, 1920, 1080);
+        let slide = pptx.addSlide();
+        slide.addImage({ data: dataUrl, x: 0, y: 0, w: '100%', h: '100%' });
       }
 
-      pdf.save('math-challenge.pdf');
+      await pptx.writeFile({ fileName: `Math_Challenge_${Date.now()}.pptx` });
     } catch (err) {
-      console.error('PDF generation failed', err);
+      console.error('PowerPoint generation failed', err);
     } finally {
       setIsDownloading(false);
     }
@@ -127,7 +110,7 @@ export default function App() {
 
   return (
     <div className="h-screen bg-slate-100 flex overflow-hidden font-sans">
-      {/* Left Panel: Editor (Orange Theme) */}
+      {/* Left Panel: Editor */}
       <div className="w-1/2 border-r bg-[#FF6700] flex flex-col shadow-xl z-20 h-full overflow-hidden text-white">
         <div className="p-6 border-b border-white/20 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
@@ -142,20 +125,12 @@ export default function App() {
         <div ref={editorScrollRef} className="flex-1 overflow-y-auto p-8 space-y-12 pb-40">
           <section className="space-y-4">
             <Label className="text-white text-lg font-bold">1. Cover Title</Label>
-            <Input 
-              className="bg-white text-black h-14 text-xl font-bold" 
-              value={data.page1.title} 
-              onChange={(e) => handleInputChange('page1', 'title', e.target.value)}
-            />
+            <Input className="bg-white text-black h-14 text-xl font-bold" value={data.page1.title} onChange={(e) => handleInputChange('page1', 'title', e.target.value)} />
           </section>
 
           <section className="space-y-4">
             <Label className="text-white text-lg font-bold">2. Question & Image</Label>
-            <Textarea 
-              className="bg-white text-black text-lg min-h-[120px]" 
-              value={data.page2.content} 
-              onChange={(e) => handleInputChange('page2', 'content', e.target.value)}
-            />
+            <Textarea className="bg-white text-black text-lg min-h-[120px]" value={data.page2.content} onChange={(e) => handleInputChange('page2', 'content', e.target.value)} />
             <div className="flex gap-4 items-center">
                <div className="flex-1 relative border-2 border-dashed border-white/40 rounded-xl p-4 text-center cursor-pointer hover:bg-white/10 transition-colors">
                  <ImageIcon className="mx-auto mb-2" />
@@ -168,11 +143,7 @@ export default function App() {
 
           <section className="space-y-4">
             <Label className="text-white text-lg font-bold">3. Solution & Image</Label>
-            <Textarea 
-              className="bg-white text-black text-lg min-h-[120px]" 
-              value={data.page3.content} 
-              onChange={(e) => handleInputChange('page3', 'content', e.target.value)}
-            />
+            <Textarea className="bg-white text-black text-lg min-h-[120px]" value={data.page3.content} onChange={(e) => handleInputChange('page3', 'content', e.target.value)} />
             <div className="flex gap-4 items-center">
                <div className="flex-1 relative border-2 border-dashed border-white/40 rounded-xl p-4 text-center cursor-pointer hover:bg-white/10 transition-colors">
                  <ImageIcon className="mx-auto mb-2" />
@@ -185,9 +156,9 @@ export default function App() {
         </div>
 
         <div className="p-8 border-t border-white/20 shrink-0 bg-[#FF6700]">
-          <Button onClick={downloadPdf} className="w-full h-14 text-xl font-bold bg-white text-[#FF6700] hover:bg-slate-100" disabled={isDownloading}>
+          <Button onClick={downloadPptx} className="w-full h-14 text-xl font-bold bg-white text-[#FF6700] hover:bg-slate-100" disabled={isDownloading}>
             {isDownloading ? <RefreshCcw className="mr-3 animate-spin" /> : <FileDown className="mr-3" />}
-            {isDownloading ? 'Generating PDF...' : 'Download PDF'}
+            {isDownloading ? 'Generating PPTX...' : 'Download PowerPoint'}
           </Button>
         </div>
       </div>
@@ -195,13 +166,12 @@ export default function App() {
       {/* Right Panel: Preview */}
       <div ref={previewScrollRef} className="w-1/2 bg-slate-200 h-full overflow-y-auto">
         <div className="p-12 flex flex-col items-center gap-12">
-          <div ref={scaledContainerRef} className="flex flex-col gap-16 origin-top scale-[0.25] lg:scale-[0.22] xl:scale-[0.25] 2xl:scale-[0.3]">
+          <div className="flex flex-col gap-16 origin-top scale-[0.25] lg:scale-[0.22] xl:scale-[0.25] 2xl:scale-[0.3]">
             
             {/* Page 1 */}
             <PageTemplate index={0} bgImage={TEMPLATE_IMAGES.cover}>
               <div className="flex-1 flex flex-col items-center justify-center text-center pb-40 pr-[550px]">
-                {/* ID added to help capture find the text */}
-                <h1 id="pdf-title" className="text-[140px] font-black text-black leading-[1.1] max-w-[1000px] break-words">
+                <h1 className="text-[140px] font-black text-black leading-[1.1] max-w-[1000px] break-words">
                   {data.page1.title}
                 </h1>
               </div>
@@ -215,16 +185,13 @@ export default function App() {
                     {data.page2.content}
                   </div>
                 </div>
-                {/* Image Box: Resized and Framed */}
+                {/* Image Box: Stretched to Frame */}
                 <div className="w-[880px] h-[780px] flex items-center justify-center -mt-10 mr-4">
-                  <div className="w-[820px] h-[720px] bg-white rounded-[40px] overflow-hidden flex items-center justify-center border-[12px] border-white shadow-sm">
+                  <div className="w-[820px] h-[720px] bg-white rounded-[40px] overflow-hidden flex items-center justify-center border-[12px] border-white">
                     {data.page2.image ? (
-                      <img src={data.page2.image} className="w-full h-full object-contain bg-white" alt="" />
+                      <img src={data.page2.image} className="w-full h-full object-fill" alt="" />
                     ) : (
-                      <div className="flex flex-col items-center text-slate-300">
-                        <ImageIcon size={120} />
-                        <span className="text-4xl font-bold mt-4 uppercase">Question Image</span>
-                      </div>
+                      <div className="flex flex-col items-center text-slate-200"><ImageIcon size={120} /></div>
                     )}
                   </div>
                 </div>
@@ -239,16 +206,13 @@ export default function App() {
                     {data.page3.content}
                   </div>
                 </div>
-                {/* Image Box: Resized and Framed */}
+                {/* Image Box: Stretched to Frame */}
                 <div className="w-[880px] h-[780px] flex items-center justify-center -mt-10 mr-4">
-                  <div className="w-[820px] h-[720px] bg-white rounded-[40px] overflow-hidden flex items-center justify-center border-[12px] border-white shadow-sm">
+                  <div className="w-[820px] h-[720px] bg-white rounded-[40px] overflow-hidden flex items-center justify-center border-[12px] border-white">
                     {data.page3.image ? (
-                      <img src={data.page3.image} className="w-full h-full object-contain bg-white" alt="" />
+                      <img src={data.page3.image} className="w-full h-full object-fill" alt="" />
                     ) : (
-                      <div className="flex flex-col items-center text-slate-300">
-                        <ImageIcon size={120} />
-                        <span className="text-4xl font-bold mt-4 uppercase">Solution Image</span>
-                      </div>
+                      <div className="flex flex-col items-center text-slate-200"><ImageIcon size={120} /></div>
                     )}
                   </div>
                 </div>
