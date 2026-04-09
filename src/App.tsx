@@ -31,9 +31,9 @@ const INITIAL_DATA: TemplateData = {
 };
 
 const TEMPLATE_IMAGES = {
-  cover: 'template1.png',
-  question: 'template2.png',
-  solution: 'template3.png',
+  cover: '/KBCCS2_RWM2026_Template/template1.png',
+  question: '/KBCCS2_RWM2026_Template/template2.png',
+  solution: '/KBCCS2_RWM2026_Template/template3.png',
 };
 
 export default function App() {
@@ -177,7 +177,18 @@ export default function App() {
       ref={pageRefs[index]}
       className="w-[1920px] h-[1080px] relative overflow-hidden shrink-0 font-sans bg-white"
     >
-      {/* Content Overlay */}
+      {/* BACKGROUND PNG TEMPLATE */}
+      <img 
+        src={bgImage} 
+        alt="" 
+        className="absolute inset-0 w-full h-full object-cover"
+        onError={(e) => {
+          console.error("Image failed to load:", bgImage);
+          // Optional: handle broken image
+        }}
+      />
+      
+      {/* Content Overlay - Ensure z-10 so it sits on top of the image */}
       <div className="absolute inset-0 p-20 flex flex-col z-10">
         {children}
       </div>
