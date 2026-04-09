@@ -31,9 +31,9 @@ const INITIAL_DATA: TemplateData = {
 };
 
 const TEMPLATE_IMAGES = {
-  cover: '/template1.png',
-  question: '/template2.png',
-  solution: '/template3.png',
+  cover: './template1.png',
+  question: './template2.png',
+  solution: './template3.png',
 };
 
 export default function App() {
