@@ -43,7 +43,6 @@ export default function App() {
   const editorScrollRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const scaledContainerRef = useRef<HTMLDivElement>(null);
-  const sectionRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
   const pageRefs = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)];
 
   const handleInputChange = (page: keyof TemplateData, field: string, value: string) => {
@@ -76,6 +75,9 @@ export default function App() {
 
   const downloadPdf = async () => {
     setIsDownloading(true);
+    // Small delay to ensure all DOM elements (especially text) are fully painted
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     try {
       const pdf = new jsPDF({
         orientation: 'landscape',
@@ -87,12 +89,15 @@ export default function App() {
         const ref = pageRefs[i].current;
         if (!ref) continue;
 
-        // Using a slight delay and cacheBust ensures the title renders in the PNG
+        // capture the page
         const dataUrl = await toPng(ref, { 
           pixelRatio: 2,
           width: 1920,
           height: 1080,
-          cacheBust: true,
+          skipFonts: false,
+          style: {
+            transform: 'scale(1)', // Ensures no scaling artifacts in the capture
+          }
         });
 
         if (i > 0) pdf.addPage([1920, 1080], 'landscape');
@@ -126,7 +131,7 @@ export default function App() {
       <div className="w-1/2 border-r bg-[#FF6700] flex flex-col shadow-xl z-20 h-full overflow-hidden text-white">
         <div className="p-6 border-b border-white/20 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <img src="./logo.png" alt="Logo" className="h-8 w-auto brightness-0 invert" />
+            <img src="./logo.png" alt="Logo" className="h-10 w-auto brightness-0 invert" />
             <h1 className="font-bold text-xl uppercase tracking-wider">Editor</h1>
           </div>
           <Button variant="ghost" size="icon" onClick={resetData} className="text-white hover:bg-white/20">
@@ -135,97 +140,90 @@ export default function App() {
         </div>
 
         <div ref={editorScrollRef} className="flex-1 overflow-y-auto p-8 space-y-12 pb-40">
-          {/* Page 1 Editor */}
-          <section ref={sectionRefs[0]} className="space-y-4">
-            <div className="flex items-center gap-3 font-bold uppercase text-sm">
-              <span className="w-6 h-6 rounded-full bg-white text-[#FF6700] flex items-center justify-center">1</span>
-              Cover Page
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white">Main Title</Label>
-              <Input 
-                className="bg-white text-black h-14 text-xl font-bold" 
-                value={data.page1.title} 
-                onChange={(e) => handleInputChange('page1', 'title', e.target.value)}
-              />
-            </div>
+          <section className="space-y-4">
+            <Label className="text-white text-lg font-bold">1. Cover Title</Label>
+            <Input 
+              className="bg-white text-black h-14 text-xl font-bold" 
+              value={data.page1.title} 
+              onChange={(e) => handleInputChange('page1', 'title', e.target.value)}
+            />
           </section>
 
-          {/* Page 2 Editor */}
-          <section ref={sectionRefs[1]} className="space-y-4">
-            <div className="flex items-center gap-3 font-bold uppercase text-sm">
-              <span className="w-6 h-6 rounded-full bg-white text-[#FF6700] flex items-center justify-center">2</span>
-              Question Page
-            </div>
+          <section className="space-y-4">
+            <Label className="text-white text-lg font-bold">2. Question & Image</Label>
             <Textarea 
-              className="bg-white text-black text-lg min-h-[150px]" 
+              className="bg-white text-black text-lg min-h-[120px]" 
               value={data.page2.content} 
               onChange={(e) => handleInputChange('page2', 'content', e.target.value)}
             />
-            <div className="relative group border-2 border-dashed border-white/40 rounded-xl p-4 text-center cursor-pointer hover:bg-white/10 transition-colors">
-              <ImageIcon className="mx-auto mb-2" />
-              <span className="text-xs uppercase font-bold">Upload Question Image</span>
-              <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload('page2', e)} />
+            <div className="flex gap-4 items-center">
+               <div className="flex-1 relative border-2 border-dashed border-white/40 rounded-xl p-4 text-center cursor-pointer hover:bg-white/10 transition-colors">
+                 <ImageIcon className="mx-auto mb-2" />
+                 <span className="text-xs uppercase font-bold">Upload Image</span>
+                 <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload('page2', e)} />
+               </div>
+               {data.page2.image && <Button variant="destructive" onClick={() => removeImage('page2')}><Trash2 /></Button>}
             </div>
           </section>
 
-          {/* Page 3 Editor */}
-          <section ref={sectionRefs[2]} className="space-y-4">
-            <div className="flex items-center gap-3 font-bold uppercase text-sm">
-              <span className="w-6 h-6 rounded-full bg-white text-[#FF6700] flex items-center justify-center">3</span>
-              Solution Page
-            </div>
+          <section className="space-y-4">
+            <Label className="text-white text-lg font-bold">3. Solution & Image</Label>
             <Textarea 
-              className="bg-white text-black text-lg min-h-[150px]" 
+              className="bg-white text-black text-lg min-h-[120px]" 
               value={data.page3.content} 
               onChange={(e) => handleInputChange('page3', 'content', e.target.value)}
             />
-            <div className="relative group border-2 border-dashed border-white/40 rounded-xl p-4 text-center cursor-pointer hover:bg-white/10 transition-colors">
-              <ImageIcon className="mx-auto mb-2" />
-              <span className="text-xs uppercase font-bold">Upload Solution Image</span>
-              <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload('page3', e)} />
+            <div className="flex gap-4 items-center">
+               <div className="flex-1 relative border-2 border-dashed border-white/40 rounded-xl p-4 text-center cursor-pointer hover:bg-white/10 transition-colors">
+                 <ImageIcon className="mx-auto mb-2" />
+                 <span className="text-xs uppercase font-bold">Upload Image</span>
+                 <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => handleImageUpload('page3', e)} />
+               </div>
+               {data.page3.image && <Button variant="destructive" onClick={() => removeImage('page3')}><Trash2 /></Button>}
             </div>
           </section>
         </div>
 
-        <div className="p-8 border-t border-white/20 shrink-0">
+        <div className="p-8 border-t border-white/20 shrink-0 bg-[#FF6700]">
           <Button onClick={downloadPdf} className="w-full h-14 text-xl font-bold bg-white text-[#FF6700] hover:bg-slate-100" disabled={isDownloading}>
             {isDownloading ? <RefreshCcw className="mr-3 animate-spin" /> : <FileDown className="mr-3" />}
-            {isDownloading ? 'Generating...' : 'Download PDF'}
+            {isDownloading ? 'Generating PDF...' : 'Download PDF'}
           </Button>
         </div>
       </div>
 
       {/* Right Panel: Preview */}
       <div ref={previewScrollRef} className="w-1/2 bg-slate-200 h-full overflow-y-auto">
-        <div className="p-12 flex flex-col items-center gap-12 min-h-full">
-          <div className="flex flex-col gap-16 origin-top scale-[0.25] lg:scale-[0.2] xl:scale-[0.25] 2xl:scale-[0.3]">
+        <div className="p-12 flex flex-col items-center gap-12">
+          <div ref={scaledContainerRef} className="flex flex-col gap-16 origin-top scale-[0.25] lg:scale-[0.22] xl:scale-[0.25] 2xl:scale-[0.3]">
             
-            {/* Page 1 Preview */}
+            {/* Page 1 */}
             <PageTemplate index={0} bgImage={TEMPLATE_IMAGES.cover}>
               <div className="flex-1 flex flex-col items-center justify-center text-center pb-40 pr-[550px]">
-                <h1 className="text-[140px] font-black text-black leading-[1.1] max-w-[1000px] break-words line-clamp-3">
+                {/* ID added to help capture find the text */}
+                <h1 id="pdf-title" className="text-[140px] font-black text-black leading-[1.1] max-w-[1000px] break-words">
                   {data.page1.title}
                 </h1>
               </div>
             </PageTemplate>
 
-            {/* Page 2 Preview */}
+            {/* Page 2 */}
             <PageTemplate index={1} bgImage={TEMPLATE_IMAGES.question}>
-              <div className="flex flex-col h-full pt-20">
-                <div className="flex-1 flex gap-16">
-                  <div className="flex-1 pt-20 pl-10">
-                    <div className="text-[55px] font-bold text-slate-700 leading-[1.4] whitespace-pre-wrap">
-                      {data.page2.content}
-                    </div>
+              <div className="flex h-full pt-28">
+                <div className="flex-1 pt-20 pl-14">
+                  <div className="text-[55px] font-bold text-slate-700 leading-[1.4] whitespace-pre-wrap max-w-[800px]">
+                    {data.page2.content}
                   </div>
-                  <div className="w-[850px] h-full flex items-center justify-center -my-20 -mr-20">
+                </div>
+                {/* Image Box: Resized and Framed */}
+                <div className="w-[880px] h-[780px] flex items-center justify-center -mt-10 mr-4">
+                  <div className="w-[820px] h-[720px] bg-white rounded-[40px] overflow-hidden flex items-center justify-center border-[12px] border-white shadow-sm">
                     {data.page2.image ? (
-                      <img src={data.page2.image} className="w-full h-full object-cover" alt="" />
+                      <img src={data.page2.image} className="w-full h-full object-contain bg-white" alt="" />
                     ) : (
-                      <div className="w-[700px] h-[500px] border-8 border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center bg-slate-100/50">
-                        <ImageIcon size={100} className="text-slate-300" />
-                        <span className="text-slate-400 text-4xl font-bold mt-4 uppercase">Image Placeholder</span>
+                      <div className="flex flex-col items-center text-slate-300">
+                        <ImageIcon size={120} />
+                        <span className="text-4xl font-bold mt-4 uppercase">Question Image</span>
                       </div>
                     )}
                   </div>
@@ -233,22 +231,23 @@ export default function App() {
               </div>
             </PageTemplate>
 
-            {/* Page 3 Preview */}
+            {/* Page 3 */}
             <PageTemplate index={2} bgImage={TEMPLATE_IMAGES.solution}>
-              <div className="flex flex-col h-full pt-20">
-                <div className="flex-1 flex gap-16">
-                  <div className="flex-1 pt-20 pl-10">
-                    <div className="text-[55px] font-bold text-slate-700 leading-[1.4] whitespace-pre-wrap">
-                      {data.page3.content}
-                    </div>
+              <div className="flex h-full pt-28">
+                <div className="flex-1 pt-20 pl-14">
+                  <div className="text-[55px] font-bold text-slate-700 leading-[1.4] whitespace-pre-wrap max-w-[800px]">
+                    {data.page3.content}
                   </div>
-                  <div className="w-[850px] h-full flex items-center justify-center -my-20 -mr-20">
+                </div>
+                {/* Image Box: Resized and Framed */}
+                <div className="w-[880px] h-[780px] flex items-center justify-center -mt-10 mr-4">
+                  <div className="w-[820px] h-[720px] bg-white rounded-[40px] overflow-hidden flex items-center justify-center border-[12px] border-white shadow-sm">
                     {data.page3.image ? (
-                      <img src={data.page3.image} className="w-full h-full object-cover" alt="" />
+                      <img src={data.page3.image} className="w-full h-full object-contain bg-white" alt="" />
                     ) : (
-                      <div className="w-[700px] h-[500px] border-8 border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center bg-slate-100/50">
-                        <ImageIcon size={100} className="text-slate-300" />
-                        <span className="text-slate-400 text-4xl font-bold mt-4 uppercase">Image Placeholder</span>
+                      <div className="flex flex-col items-center text-slate-300">
+                        <ImageIcon size={120} />
+                        <span className="text-4xl font-bold mt-4 uppercase">Solution Image</span>
                       </div>
                     )}
                   </div>
